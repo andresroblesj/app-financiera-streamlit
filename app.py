@@ -1,135 +1,140 @@
+import streamlit as st
 import yfinance as yf
 import pandas as pd
 import numpy as np
-from scipy.stats import norm
-import plotly.graph_objects as go
-from datetime import datetime
+import matplotlib.pyplot as plt
+import seaborn as sns
 
-# Parámetros de entrada
-ticker = 'AAPL'  # Símbolo de la acción
-periodo = '5y'   # Últimos 5 años
-riesgo_tolerado = 'medio'  # Opciones: bajo, medio, alto
-tipo_trading = 'largo plazo'  # Opciones: corto plazo, largo plazo
+st.set_page_config(page_title="Análisis Financiero de Empresa", layout="centered")
 
-# Descargar datos financieros y de mercado
-empresa = yf.Ticker(ticker)
-info = empresa.info
-hist = empresa.history(period=periodo)
+# Agregar CSS para mejor apariencia
+st.markdown("""
+    <style>
+        body { font-family: 'Arial', sans-serif; }
+        .reportview-container .main .block-container{
+            padding-top: 2rem;
+            padding-right: 2rem;
+            padding-left: 2rem;
+            padding-bottom: 2rem;
+        }
+        .stMarkdown h1, .stMarkdown h2, .stMarkdown h3 {
+            color: #2e86de;
+        }
+        .custom-plot {
+            border: 2px solid #2e86de;
+            border-radius: 10px;
+            padding: 1rem;
+            background-color: #f9fbfd;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+""", unsafe_allow_html=True)
 
-# 1. Evaluación de la Empresa
+st.title("Análisis Financiero Interactivo de Empresa")
+st.markdown("""
+Esta aplicación permite analizar el comportamiento financiero de una empresa pública mediante datos reales obtenidos desde Yahoo Finance. 
+Por favor, ingresa un **ticker válido** (por ejemplo, `AAPL`, `MSFT`, `TSLA`).
+""")
 
-# Métricas financieras clave
-roe = info.get('returnOnEquity', np.nan)
-roa = info.get('returnOnAssets', np.nan)
-margen_neto = info.get('profitMargins', np.nan)
-ebitda = info.get('ebitda', np.nan)
-deuda_total = info.get('totalDebt', np.nan)
-ebitda_anual = info.get('ebitda', np.nan)
-deuda_ebitda = deuda_total / ebitda_anual if ebitda_anual else np.nan
-flujo_caja_libre = info.get('freeCashflow', np.nan)
+# Entrada de ticker
+ticker_input = st.text_input("Ticker de la empresa", value="AAPL")
 
-# Tendencias de ingresos y ganancias en los últimos 5 años
-ingresos = []
-ganancias = []
-for year in range(5):
+if ticker_input:
     try:
-        fin_data = empresa.financials.iloc[:, year]
-        ingresos.append(fin_data.get('Total Revenue', np.nan))
-        ganancias.append(fin_data.get('Gross Profit', np.nan))
-    except:
-        ingresos.append(np.nan)
-        ganancias.append(np.nan)
+        ticker = yf.Ticker(ticker_input)
+        info = ticker.info
 
-# Cálculo del Altman Z-Score
-try:
-    activos_totales = info.get('totalAssets', np.nan)
-    pasivos_totales = info.get('totalLiab', np.nan)
-    capital_trabajo = info.get('workingCapital', np.nan)
-    ventas = info.get('totalRevenue', np.nan)
-    utilidad_retenida = info.get('retainedEarnings', np.nan)
-    ebit = info.get('ebit', np.nan)
-    valor_mercado_equity = info.get('marketCap', np.nan)
-    deuda_total = info.get('totalDebt', np.nan)
+        # Validar existencia del ticker
+        if not info or info.get("regularMarketPrice", None) is None:
+            st.error("Ticker inválido, por favor verifica el símbolo e intenta de nuevo.")
+        else:
+            # Mostrar información fundamental
+            st.header("Información de la Empresa")
+            st.markdown(f"**Nombre:** {info.get('shortName', 'N/A')}")
+            st.markdown(f"**Sector:** {info.get('sector', 'N/A')}")
+            st.markdown(f"**Descripción:** {info.get('longBusinessSummary', 'No disponible')}")
+            st.markdown(f"**Capitalización de mercado:** {info.get('marketCap', 'N/A'):,} USD")
+            st.markdown(f"**Beta (de Yahoo Finance):** {info.get('beta', 'N/A')}")
+            st.markdown(f"**Precio actual:** {info.get('regularMarketPrice', 'N/A')} USD")
+            st.markdown(f"**P/E Ratio (TTM):** {info.get('trailingPE', 'N/A')}")
 
-    x1 = capital_trabajo / activos_totales if activos_totales else np.nan
-    x2 = utilidad_retenida / activos_totales if activos_totales else np.nan
-    x3 = ebit / activos_totales if activos_totales else np.nan
-    x4 = valor_mercado_equity / deuda_total if deuda_total else np.nan
-    x5 = ventas / activos_totales if activos_totales else np.nan
+            # Obtener precios históricos (5 años)
+            df = ticker.history(period="5y")
+            df = df[['Close']]
+            df.rename(columns={"Close": "Precio Cierre"}, inplace=True)
 
-    z_score = 1.2*x1 + 1.4*x2 + 3.3*x3 + 0.6*x4 + 1.0*x5
-except:
-    z_score = np.nan
+            st.header("Gráfica de Precios Históricos")
+            st.markdown('<div class="custom-plot">', unsafe_allow_html=True)
+            fig, ax = plt.subplots(figsize=(12, 5))
+            sns.set_style("whitegrid")
+            sns.lineplot(data=df, x=df.index, y="Precio Cierre", ax=ax, color='#2e86de', linewidth=2.5)
+            ax.set_title(f"Precio Histórico de Cierre Ajustado - {ticker_input.upper()}", fontsize=16, color='#2e86de')
+            ax.set_xlabel("Fecha", fontsize=12)
+            ax.set_ylabel("Precio (USD)", fontsize=12)
+            ax.tick_params(axis='x', rotation=45)
+            st.pyplot(fig)
+            st.markdown('</div>', unsafe_allow_html=True)
 
-# 2. Análisis de Riesgos Externos
+            # Cálculo de rendimientos
+            st.header("Rendimientos Anualizados")
+            precios = df["Precio Cierre"]
+            fechas = precios.index
+            hoy = fechas[-1]
 
-# Factores macroeconómicos (ejemplo simplificado)
-tasas_interes = 0.05  # Suponiendo una tasa de interés del 5%
-inflacion = 0.03      # Suponiendo una inflación del 3%
-ciclo_economico = 'expansión'  # Opciones: expansión, recesión
+            def calcular_cagr(precio_inicio, precio_fin, años):
+                return (precio_fin / precio_inicio)**(1/años) - 1
 
-# Riesgos geopolíticos y regulatorios (requiere análisis cualitativo externo)
+            resumen = {}
+            for años in [1, 3, 5]:
+                fecha_inicio = hoy - pd.DateOffset(years=años)
+                precios_filtrados = precios[fechas >= fecha_inicio]
+                if len(precios_filtrados) > 0:
+                    precio_ini = precios_filtrados.iloc[0]
+                    precio_fin = precios_filtrados.iloc[-1]
+                    resumen[f"{años} años"] = f"{calcular_cagr(precio_ini, precio_fin, años)*100:.2f}%"
+                else:
+                    resumen[f"{años} años"] = "N/A"
 
-# Volatilidad de la acción y correlación con el mercado
-volatilidad = hist['Close'].pct_change().std()
-# Correlación con el índice S&P 500
-sp500 = yf.Ticker('^GSPC').history(period=periodo)['Close']
-correlacion_sp500 = hist['Close'].pct_change().corr(sp500.pct_change())
+            st.dataframe(pd.DataFrame.from_dict(resumen, orient="index", columns=["CAGR (anualizado)"]))
+            st.markdown("""
+            *El rendimiento anualizado (CAGR) se calcula usando la fórmula del crecimiento compuesto:*
+            \( CAGR = \left(\frac{Precio\ final}{Precio\ inicial}\right)^{\frac{1}{años}} - 1 \)
+            """)
 
-# 3. Análisis Técnico y Sentimiento del Mercado
+            # Volatilidad (riesgo)
+            st.header("Volatilidad Histórica (Riesgo)")
+            retornos_diarios = precios.pct_change().dropna()
+            volatilidad_anual = np.std(retornos_diarios) * np.sqrt(252)
 
-# Cálculo de indicadores técnicos
-hist['MA50'] = hist['Close'].rolling(window=50).mean()
-hist['MA200'] = hist['Close'].rolling(window=200).mean()
-hist['RSI'] = 100 - (100 / (1 + hist['Close'].pct_change().rolling(window=14).mean() / hist['Close'].pct_change().rolling(window=14).std()))
+            st.markdown(f"**Valor de riesgo:** {volatilidad_anual*100:.2f}%")
+            st.markdown("""
+            *Este valor representa la volatilidad anual histórica del activo, medida por la desviación estándar de los rendimientos diarios.*
+            """)
 
-# Sentimiento del mercado basado en volumen de negociación
-cambio_volumen = hist['Volume'].pct_change().mean()
+            # Cálculo de Beta contra el S&P 500
+            st.header("Beta calculada respecto al S&P 500")
+            sp500 = yf.Ticker("^GSPC").history(period="5y")["Close"]
+            df["S&P 500"] = sp500.reindex(df.index).ffill().bfill()
 
-# 4. Recomendaciones Cuantitativas para Trading
+            df.dropna(inplace=True)
+            df["Rend_Accion"] = df["Precio Cierre"].pct_change()
+            df["Rend_SP500"] = df["S&P 500"].pct_change()
 
-# Probabilidad de crisis financiera interna (simplificado)
-prob_crisis = norm.cdf(-z_score) if not np.isnan(z_score) else np.nan
+            df.dropna(inplace=True)
 
-# Estrategia de trading basada en momentum
-if hist['MA50'].iloc[-1] > hist['MA200'].iloc[-1]:
-    estrategia = 'Comprar'
-elif hist['MA50'].iloc[-1] < hist['MA200'].iloc[-1]:
-    estrategia = 'Vender'
-else:
-    estrategia = 'Mantener'
+            covarianza = np.cov(df["Rend_Accion"], df["Rend_SP500"])[0][1]
+            var_sp500 = np.var(df["Rend_SP500"])
+            beta_calculada = covarianza / var_sp500
 
-# 5. Visualización de Precios Históricos
+            st.markdown(f"**Beta calculada:** {beta_calculada:.4f}")
+            st.markdown("""
+            *La Beta calculada representa la sensibilidad de los rendimientos de la acción respecto a los movimientos del S&P 500. 
+            Un valor mayor a 1 implica más volatilidad que el mercado.*
+            """)
 
-fig = go.Figure()
-
-fig.add_trace(go.Scatter(
-    x=hist.index,
-    y=hist['Close'],
-    mode='lines',
-    name='Precio de cierre'
-))
-import streamlit as st
-
-st.set_page_config(layout="wide")
-st.title(f"📈 Análisis Financiero de {ticker}")
-
-st.subheader("📊 Recomendación de Trading")
-st.write(f"Estrategia sugerida: **{estrategia}**")
-st.write(f"Probabilidad de crisis financiera interna (Altman Z): {prob_crisis:.2%}")
-
-st.subheader("📈 Indicadores Técnicos")
-st.write(f"Volatilidad histórica: {volatilidad:.2%}")
-st.write(f"Correlación con el S&P 500: {correlacion_sp500:.2f}")
-
-st.subheader("💵 Finanzas Clave")
-st.write(f"ROE: {roe:.2%} | ROA: {roa:.2%} | Margen Neto: {margen_neto:.2%}")
-st.write(f"Deuda/EBITDA: {deuda_ebitda:.2f}")
-st.write(f"Flujo de Caja Libre: ${flujo_caja_libre:,}")
-
-st.subheader("📉 Ingresos y Ganancias (últimos 5 años)")
-st.write("Ingresos:", ingresos)
-st.write("Ganancias Brutas:", ganancias)
-
-st.subheader("📊 Precio Histórico")
-st.plotly_chart(fig, use_container_width=True)
+    except Exception as e:
+        st.error("Ticker inválido o error al cargar datos. Por favor verifica el símbolo e intenta de nuevo.")
+with st.sidebar:
+    st.image("jose.png", width=150, caption="Desarrollado por: José Andrés Robles Jarero")
+    st.markdown("**Estudiante de Ingeniería Financiera**")
+    st.markdown("---")
