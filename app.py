@@ -52,6 +52,7 @@ if ticker_input:
             st.header("Información de la Empresa")
             st.markdown(f"**Nombre:** {info.get('shortName', 'N/A')}")
             st.markdown(f"**Sector:** {info.get('sector', 'N/A')}")
+            st.markdown(f"**Industria:** {info.get('industry', 'N/A')}")
             st.markdown(f"**Descripción:** {info.get('longBusinessSummary', 'No disponible')}")
             st.markdown(f"**Capitalización de mercado:** {info.get('marketCap', 'N/A'):,} USD")
             st.markdown(f"**Beta (de Yahoo Finance):** {info.get('beta', 'N/A')}")
@@ -95,10 +96,15 @@ if ticker_input:
                 else:
                     resumen[f"{años} años"] = "N/A"
 
-            st.dataframe(pd.DataFrame.from_dict(resumen, orient="index", columns=["CAGR (anualizado)"]))
+            st.dataframe(pd.DataFrame.from_dict(resumen, orient="index", columns=["CAGR (anualizado)"], dtype=str))
             st.markdown("""
-            *El rendimiento anualizado (CAGR) se calcula usando la fórmula del crecimiento compuesto:*
-            \( CAGR = \left(\frac{Precio\ final}{Precio\ inicial}\right)^{\frac{1}{años}} - 1 \)
+            #### 📌 Fórmula utilizada:
+            
+            El rendimiento anualizado (CAGR) se calcula como:
+            
+            $$
+            CAGR = \left(\frac{Precio\ final}{Precio\ inicial}\right)^{\frac{1}{Años}} - 1
+            $$
             """)
 
             # Volatilidad (riesgo)
@@ -108,7 +114,15 @@ if ticker_input:
 
             st.markdown(f"**Valor de riesgo:** {volatilidad_anual*100:.2f}%")
             st.markdown("""
-            *Este valor representa la volatilidad anual histórica del activo, medida por la desviación estándar de los rendimientos diarios.*
+            #### 📌 Fórmula utilizada:
+            
+            La volatilidad anual se calcula como:
+            
+            $$
+            Volatilidad = \sigma_{diaria} \times \sqrt{252}
+            $$
+            
+            Donde $\sigma_{diaria}$ es la desviación estándar de los rendimientos diarios.
             """)
 
             # Cálculo de Beta contra el S&P 500
@@ -128,12 +142,18 @@ if ticker_input:
 
             st.markdown(f"**Beta calculada:** {beta_calculada:.4f}")
             st.markdown("""
-            *La Beta calculada representa la sensibilidad de los rendimientos de la acción respecto a los movimientos del S&P 500. 
-            Un valor mayor a 1 implica más volatilidad que el mercado.*
+            #### 📌 Fórmula utilizada:
+            
+            $$
+            Beta = \frac{\text{Cov}(R_{\text{acción}}, R_{\text{mercado}})}{\text{Var}(R_{\text{mercado}})}
+            $$
+            
+            La Beta representa la sensibilidad del rendimiento de la acción respecto al mercado.
             """)
 
     except Exception as e:
         st.error("Ticker inválido o error al cargar datos. Por favor verifica el símbolo e intenta de nuevo.")
+
 with st.sidebar:
     st.image("jose.png", width=150, caption="Desarrollado por: José Andrés Robles Jarero")
     st.markdown("**Estudiante de Ingeniería Financiera**")
