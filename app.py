@@ -4,6 +4,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
+from googletrans import Translator
 
 st.set_page_config(page_title="Análisis Financiero de Empresa", layout="centered")
 
@@ -30,6 +31,8 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
+translator = Translator()
+
 st.title("Análisis Financiero Interactivo de Empresa")
 st.markdown("""
 Esta aplicación permite analizar el comportamiento financiero de una empresa pública mediante datos reales obtenidos desde Yahoo Finance. 
@@ -50,10 +53,14 @@ if ticker_input:
         else:
             # Mostrar información fundamental
             st.header("Información de la Empresa")
+            descripcion_original = info.get('longBusinessSummary', 'No disponible')
+            descripcion_corta = descripcion_original[:300] if descripcion_original else 'No disponible'
+            descripcion_traducida = translator.translate(descripcion_corta, dest='es').text
+
             st.markdown(f"**Nombre:** {info.get('shortName', 'N/A')}")
             st.markdown(f"**Sector:** {info.get('sector', 'N/A')}")
             st.markdown(f"**Industria:** {info.get('industry', 'N/A')}")
-            st.markdown(f"**Descripción:** {info.get('longBusinessSummary', 'No disponible')}")
+            st.markdown(f"**Descripción corta:** {descripcion_traducida}")
             st.markdown(f"**Capitalización de mercado:** {info.get('marketCap', 'N/A'):,} USD")
             st.markdown(f"**Beta (de Yahoo Finance):** {info.get('beta', 'N/A')}")
             st.markdown(f"**Precio actual:** {info.get('regularMarketPrice', 'N/A')} USD")
@@ -99,11 +106,11 @@ if ticker_input:
             st.dataframe(pd.DataFrame.from_dict(resumen, orient="index", columns=["CAGR (anualizado)"], dtype=str))
             st.markdown("""
             #### 📌 Fórmula utilizada:
-            
+
             El rendimiento anualizado (CAGR) se calcula como:
-            
+
             $$
-            CAGR = \left(\frac{Precio\ final}{Precio\ inicial}\right)^{\frac{1}{Años}} - 1
+            CAGR = \\left(\\frac{Precio\\ final}{Precio\\ inicial}\\right)^{\\frac{1}{Años}} - 1
             $$
             """)
 
@@ -115,14 +122,14 @@ if ticker_input:
             st.markdown(f"**Valor de riesgo:** {volatilidad_anual*100:.2f}%")
             st.markdown("""
             #### 📌 Fórmula utilizada:
-            
+
             La volatilidad anual se calcula como:
-            
+
             $$
-            Volatilidad = \sigma_{diaria} \times \sqrt{252}
+            Volatilidad = \\sigma_{diaria} \\times \\sqrt{252}
             $$
-            
-            Donde $\sigma_{diaria}$ es la desviación estándar de los rendimientos diarios.
+
+            Donde $\\sigma_{diaria}$ es la desviación estándar de los rendimientos diarios.
             """)
 
             # Cálculo de Beta contra el S&P 500
@@ -143,11 +150,11 @@ if ticker_input:
             st.markdown(f"**Beta calculada:** {beta_calculada:.4f}")
             st.markdown("""
             #### 📌 Fórmula utilizada:
-            
+
             $$
-            Beta = \frac{\text{Cov}(R_{\text{acción}}, R_{\text{mercado}})}{\text{Var}(R_{\text{mercado}})}
+            Beta = \\frac{\\text{Cov}(R_{\\text{acción}}, R_{\\text{mercado}})}{\\text{Var}(R_{\\text{mercado}})}
             $$
-            
+
             La Beta representa la sensibilidad del rendimiento de la acción respecto al mercado.
             """)
 
