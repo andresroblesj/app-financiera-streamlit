@@ -119,7 +119,7 @@ if ticker_input:
             retornos_diarios = precios.pct_change().dropna()
             volatilidad_anual = np.std(retornos_diarios) * np.sqrt(252)
 
-            st.markdown(f"**Valor de riesgo:** {volatilidad_anual*100:.2f}%")
+            st.markdown(f"**Valor de riesgo (volatilidad anual):** {volatilidad_anual*100:.2f}%")
             st.markdown("""
             #### 📌 Fórmula utilizada:
 
@@ -130,6 +130,15 @@ if ticker_input:
             $$
 
             Donde $\\sigma_{diaria}$ es la desviación estándar de los rendimientos diarios.
+            """)
+
+            # Riesgo total como sección destacada
+            st.header("📊 Riesgo Total Estimado")
+            st.markdown(f"""
+            **Volatilidad histórica anual (como medida de riesgo):**  
+            📈 **{volatilidad_anual*100:.2f}%**
+
+            Este valor representa la variabilidad anual esperada de los rendimientos de esta empresa.
             """)
 
             # Cálculo de Beta contra el S&P 500
